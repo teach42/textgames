@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Python Arcade</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --green: #39ff6a; --green-dim: #1a6b30; --green-glow: rgba(57,255,106,0.12);
+  --amber: #ffd24d; --bg: #0b0b0b; --surface: #141414; --surface2: #1b1b1b;
+  --border: rgba(57,255,106,0.2); --border-dim: rgba(255,255,255,0.08);
+  --text: #cce8d4; --muted: #4d6b54;
+  --mono: 'Courier New','Lucida Console',monospace; --sans: system-ui,-apple-system,sans-serif;
+}
+body { background:var(--bg); color:var(--text); font-family:var(--sans); min-height:100vh; overflow-x:hidden; }
+header { border-bottom:1px solid var(--border); padding:0.9rem 2rem; display:flex; align-items:center; gap:1rem; background:var(--surface); }
+.logo { font-family:var(--mono); font-size:1rem; color:var(--green); letter-spacing:0.08em; }
+.logo span { color:var(--amber); }
+.badge { font-family:var(--mono); font-size:0.68rem; background:var(--green-glow); border:1px solid var(--border); color:var(--green); padding:2px 8px; border-radius:3px; letter-spacing:0.12em; }
+.screen { display:none; }
+.screen.active { display:block; }
+
+/* Upload */
+#upload-screen { display:none; min-height:calc(100vh - 54px); align-items:center; justify-content:center; padding:2rem; flex-direction:column; gap:1.75rem; }
+#upload-screen.active { display:flex; }
+.drop-zone { width:100%; max-width:460px; border:2px dashed var(--green-dim); border-radius:12px; padding:2.5rem 2rem; text-align:center; cursor:pointer; transition:border-color .2s,background .2s; background:var(--surface); display:block; }
+.drop-zone:hover,.drop-zone.drag-over { border-color:var(--green); background:var(--green-glow); }
+.drop-icon { font-size:2.5rem; display:block; margin-bottom:1rem; }
+.drop-zone h2 { font-family:var(--mono); font-size:0.95rem; color:var(--green); margin-bottom:0.5rem; letter-spacing:0.06em; }
+.drop-zone p { font-size:0.82rem; color:var(--muted); line-height:1.6; }
+.drop-zone p code { color:var(--amber); font-family:var(--mono); font-size:0.85em; }
+.drop-zone input[type=file] { display:none; }
+.help-box { max-width:460px; width:100%; background:var(--surface); border:1px solid var(--border-dim); border-radius:8px; padding:1.25rem 1.5rem; font-family:var(--mono); font-size:0.78rem; color:var(--muted); line-height:1.9; }
+.help-box strong { color:var(--amber); font-weight:normal; }
+.help-box .tree { color:var(--text); opacity:0.45; }
+.tip { margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid var(--border-dim); font-size:0.74rem; }
+.tip b { color:var(--green); font-weight:normal; }
+
+/* Lobby */
+#lobby-screen { display:none; min-height:calc(100vh - 54px); padding:1.75rem 2rem; flex-direction:column; gap:1.5rem; }
+#lobby-screen.active { display:flex; }
+.lobby-header { display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:1rem; }
+.lobby-title { font-family:var(--mono); font-size:0.9rem; color:var(--green); letter-spacing:0.1em; margin-bottom:0.2rem; }
+.lobby-count { font-family:var(--mono); font-size:0.75rem; color:var(--muted); }
+.btn-sm { font-family:var(--mono); font-size:0.73rem; background:transparent; border:1px solid var(--border-dim); color:var(--muted); padding:6px 14px; border-radius:4px; cursor:pointer; transition:color .15s,border-color .15s; }
+.btn-sm:hover { color:var(--amber); border-color:var(--amber); }
+.games-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:1rem; }
+.game-card { background:var(--surface); border:1px solid var(--border-dim); border-radius:10px; padding:1.4rem 1.2rem; cursor:pointer; transition:border-color .18s,background .18s,transform .12s; display:flex; flex-direction:column; gap:0.55rem; }
+.game-card:hover { border-color:var(--green); background:var(--surface2); transform:translateY(-2px); }
+.game-card:active { transform:translateY(0); }
+.card-icon { font-size:1.75rem; line-height:1; }
+.card-name { font-family:var(--mono); font-size:0.9rem; color:var(--green); letter-spacing:0.03em; word-break:break-word; }
+.card-meta { font-family:var(--mono); font-size:0.7rem; color:var(--muted); }
+.card-launch { margin-top:auto; padding-top:0.7rem; font-family:var(--mono); font-size:0.72rem; color:var(--muted); letter-spacing:0.08em; }
+.game-card:hover .card-launch { color:var(--green); }
+
+/* Terminal */
+#terminal-screen { display:none; min-height:calc(100vh - 54px); flex-direction:column; }
+#terminal-screen.active { display:flex; }
+.terminal-bar { background:var(--surface); border-bottom:1px solid var(--border); padding:0.55rem 1.25rem; display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; }
+.btn-back,.btn-restart { font-family:var(--mono); font-size:0.75rem; padding:5px 13px; border-radius:4px; cursor:pointer; }
+.btn-back { background:transparent; border:1px solid var(--border-dim); color:var(--muted); transition:color .15s,border-color .15s; }
+.btn-back:hover { color:var(--text); border-color:var(--green-dim); }
+.btn-restart { background:var(--green-glow); border:1px solid var(--green-dim); color:var(--green); transition:background .15s; }
+.btn-restart:hover { background:rgba(57,255,106,0.22); }
+.terminal-game-name { font-family:var(--mono); font-size:0.82rem; color:var(--amber); letter-spacing:0.05em; }
+.terminal-status { margin-left:auto; font-family:var(--mono); font-size:0.7rem; color:var(--muted); display:flex; align-items:center; gap:6px; }
+.status-dot { width:7px; height:7px; border-radius:50%; background:var(--muted); flex-shrink:0; }
+.status-dot.running { background:var(--green); animation:pulse 1.5s ease-in-out infinite; }
+.status-dot.done { background:var(--amber); }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.35} }
+.terminal-body { flex:1; background:#060e07; padding:1.25rem 1.5rem; overflow-y:auto; font-family:var(--mono); font-size:0.88rem; line-height:1.75; }
+#terminal-output { white-space:pre-wrap; word-break:break-word; color:var(--green); }
+.t-sys { color:var(--muted); }
+.t-err { color:#ff6060; }
+.loading-row { display:flex; align-items:center; gap:0.6rem; margin-bottom:0.5rem; }
+.spinner { width:12px; height:12px; border:2px solid var(--green-dim); border-top-color:var(--green); border-radius:50%; animation:spin .65s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg)} }
+.toast { position:fixed; bottom:1.5rem; left:50%; transform:translateX(-50%); background:#200e0e; border:1px solid rgba(255,80,80,.3); color:#ff9090; font-family:var(--mono); font-size:0.78rem; padding:0.55rem 1.25rem; border-radius:6px; z-index:100; opacity:0; transition:opacity .25s; pointer-events:none; max-width:90vw; text-align:center; }
+.toast.show { opacity:1; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">&#9654; <span>STUDENT</span>_ARCADE</div>
+  <div class="badge">PYTHON</div>
+</header>
+
+<div id="upload-screen" class="screen active">
+  <label class="drop-zone" id="drop-zone">
+    <span class="drop-icon">&#128190;</span>
+    <h2>DROP YOUR ZIP FILE HERE</h2>
+    <p>or click to browse &mdash; <code>.zip</code> files only</p>
+    <p style="margin-top:.4rem">Each game should be a folder inside the zip containing a <code>main.py</code></p>
+    <input type="file" id="file-input" accept=".zip">
+  </label>
+  <div class="help-box">
+    <strong>Expected zip structure:</strong><br>
+    <span class="tree">games.zip<br>&#9500;&#9472;&#9472; snake_game/<br>&#9474;&nbsp;&nbsp;&nbsp;&#9492;&#9472;&#9472; main.py<br>&#9500;&#9472;&#9472; quiz_master/<br>&#9474;&nbsp;&nbsp;&nbsp;&#9492;&#9472;&#9472; main.py<br>&#9492;&#9472;&#9472; number_guesser/<br>&nbsp;&nbsp;&nbsp;&nbsp;&#9492;&#9472;&#9472; main.py</span>
+    <div class="tip"><b>Supported:</b> os &nbsp;&#183;&nbsp; sys &nbsp;&#183;&nbsp; time &nbsp;&#183;&nbsp; random<br><b>Note:</b> When a game asks for input, your browser will show a small popup dialog.</div>
+  </div>
+</div>
+
+<div id="lobby-screen" class="screen">
+  <div class="lobby-header">
+    <div>
+      <div class="lobby-title">SELECT A GAME</div>
+      <div class="lobby-count" id="lobby-count"></div>
+    </div>
+    <button class="btn-sm" id="btn-reset">&#8617;&nbsp; Load new zip</button>
+  </div>
+  <div class="games-grid" id="games-grid"></div>
+</div>
+
+<div id="terminal-screen" class="screen">
+  <div class="terminal-bar">
+    <button class="btn-back" id="btn-back">&#8592; Lobby</button>
+    <button class="btn-restart" id="btn-restart">&#8635;&nbsp; Restart</button>
+    <span class="terminal-game-name" id="terminal-game-name"></span>
+    <span class="terminal-status">
+      <span class="status-dot" id="status-dot"></span>
+      <span id="status-text">idle</span>
+    </span>
+  </div>
+  <div class="terminal-body" id="terminal-body">
+    <div id="terminal-output"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+<script>
+const ICONS=['&#127918;','&#9881;&#65039;','&#128640;','&#127922;','&#128293;','&#128123;','&#9889;','&#127775;','&#128081;','&#128007;','&#128302;','&#127877;'];
+let games={}, pyodide=null, currentGame=null;
+
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
+
+// Upload
+const dropZone=document.getElementById('drop-zone'), fileInput=document.getElementById('file-input');
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('drag-over');});
+['dragleave','drop'].forEach(ev=>dropZone.addEventListener(ev,()=>dropZone.classList.remove('drag-over')));
+dropZone.addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f&&f.name.endsWith('.zip'))processZip(f);else toast('Please drop a .zip file');});
+fileInput.addEventListener('change',e=>{if(e.target.files[0])processZip(e.target.files[0]);});
+
+async function processZip(file){
+  try{
+    const zip=await JSZip.loadAsync(file), found={};
+    zip.forEach((path,entry)=>{
+      if(entry.dir)return;
+      const parts=path.split('/').filter(Boolean);
+      if(parts.length>=2&&parts[parts.length-1]==='main.py'){
+        const folder=parts[0];
+        if(!found[folder])found[folder]=entry;
+      }
+    });
+    if(!Object.keys(found).length){toast('No subfolders with main.py found. Check your zip structure.');return;}
+    games={};
+    for(const[name,entry]of Object.entries(found))games[name]=await entry.async('string');
+    buildLobby(); show('lobby-screen');
+  }catch(err){toast('Could not read zip: '+err.message);}
+}
+
+// Lobby
+function buildLobby(){
+  const names=Object.keys(games).sort();
+  document.getElementById('lobby-count').textContent=names.length+' game'+(names.length!==1?'s':'')+' loaded';
+  document.getElementById('games-grid').innerHTML=names.map((name,i)=>{
+    const display=name.replace(/[-_]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+    const lines=games[name].split('\n').length;
+    return`<div class="game-card" data-game="${name}">
+      <div class="card-icon">${ICONS[i%ICONS.length]}</div>
+      <div class="card-name">${display}</div>
+      <div class="card-meta">${lines} lines &middot; main.py</div>
+      <div class="card-launch">[ LAUNCH ] &rsaquo;</div>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('.game-card').forEach(c=>c.addEventListener('click',()=>launchGame(c.dataset.game)));
+}
+document.getElementById('btn-reset').addEventListener('click',()=>{games={};fileInput.value='';show('upload-screen');});
+
+// Terminal
+function termAppend(text,cls){
+  const out=document.getElementById('terminal-output');
+  if(cls){const span=document.createElement('span');span.className=cls;span.textContent=text;out.appendChild(span);}
+  else out.appendChild(document.createTextNode(text));
+  document.getElementById('terminal-body').scrollTop=999999;
+}
+function termClear(){document.getElementById('terminal-output').innerHTML='';}
+function setStatus(s,label){document.getElementById('status-dot').className='status-dot '+s;document.getElementById('status-text').textContent=label||s;}
+
+// Pyodide
+async function ensurePyodide(){
+  if(pyodide)return pyodide;
+  const row=document.createElement('div');row.className='loading-row';
+  row.innerHTML='<div class="spinner"></div><span class="t-sys">Loading Python runtime&hellip; (first launch only)</span>';
+  document.getElementById('terminal-output').appendChild(row);
+  document.getElementById('terminal-body').scrollTop=999999;
+  pyodide=await loadPyodide();
+  row.remove();
+  return pyodide;
+}
+
+// Game runner
+document.getElementById('btn-back').addEventListener('click',()=>{currentGame=null;show('lobby-screen');});
+document.getElementById('btn-restart').addEventListener('click',()=>{if(currentGame)launchGame(currentGame);});
+
+async function launchGame(name){
+  currentGame=name; termClear(); setStatus('running','running');
+  document.getElementById('terminal-game-name').textContent=name.replace(/[-_]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+  show('terminal-screen');
+
+  window.__pyWrite=s=>termAppend(s);
+  window.__pyWriteErr=s=>termAppend(s,'t-err');
+
+  try{
+    const py=await ensurePyodide();
+
+    py.runPython(`
+import sys, os, time, builtins, traceback
+
+class _Out:
+    def write(self, s):
+        from js import window
+        window.__pyWrite(str(s))
+    def flush(self): pass
+
+class _Err:
+    def write(self, s):
+        from js import window
+        window.__pyWriteErr(str(s))
+    def flush(self): pass
+
+sys.stdout = _Out()
+sys.stderr = _Err()
+sys.stdin  = None
+
+time.sleep = lambda s: None
+os.system  = lambda cmd: 0
+os._exit   = lambda *a: None
+os.getcwd  = lambda: '/games'
+os.listdir = lambda p='.': []
+
+def _js_input(prompt=''):
+    from js import window
+    if prompt:
+        window.__pyWrite(str(prompt))
+    val = window.prompt(str(prompt) if prompt else 'Input:')
+    if val is None: val = ''
+    window.__pyWrite(val + '\\n')
+    return val
+
+builtins.input = _js_input
+`);
+
+    termAppend('[ when asked for input, type in the popup dialog ]\n\n','t-sys');
+
+    py.globals.set('__student_code__', games[name]);
+    py.runPython(`
+try:
+    exec(compile(__student_code__, '<game>', 'exec'), {'__name__': '__main__', '__builtins__': __builtins__})
+except SystemExit:
+    pass
+except KeyboardInterrupt:
+    pass
+except Exception:
+    sys.stderr.write('\\n' + traceback.format_exc())
+`);
+
+    termAppend('\n\n─── game over ───\n','t-sys');
+    setStatus('done','done');
+  }catch(err){
+    termAppend('\n\nFatal error: '+err.message+'\n','t-err');
+    setStatus('done','error');
+  }
+}
+</script>
+</body>
+</html>
