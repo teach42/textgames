@@ -553,10 +553,10 @@ os.listdir = lambda p='.': []
 
 def _js_input(prompt=''):
     from js import window
-    if prompt: window.__pyWrite(str(prompt))
+    if prompt: window._pyWrite(str(prompt))
     val = window.prompt(str(prompt) if prompt else 'Input:')
     if val is None: val = ''
-    window.__pyWrite(val + '\\n')
+    window._pyWrite(val + '\\n')
     return val
 
 builtins.input = _js_input
