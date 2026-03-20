@@ -525,8 +525,8 @@ async function launchGame(id) {
   document.getElementById('terminal-game-name').textContent = g.title + ' — ' + g.author;
   show('terminal-screen');
 
-  window.__pyWrite    = s => termAppend(s);
-  window.__pyWriteErr = s => termAppend(s, 't-err');
+  window._pyWrite    = s => termAppend(s);
+  window._pyWriteErr = s => termAppend(s, 't-err');
 
   try {
     const py = await ensurePyodide();
@@ -536,12 +536,12 @@ import sys, os, time, builtins, traceback
 
 class _Out:
     def write(self, s):
-        from js import window; window.__pyWrite(str(s))
+        from js import window; window._pyWrite(str(s))
     def flush(self): pass
 
 class _Err:
     def write(self, s):
-        from js import window; window.__pyWriteErr(str(s))
+        from js import window; window._pyWriteErr(str(s))
     def flush(self): pass
 
 sys.stdout = _Out(); sys.stderr = _Err(); sys.stdin = None
